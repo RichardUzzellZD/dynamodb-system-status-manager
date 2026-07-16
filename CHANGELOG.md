@@ -2,185 +2,141 @@
 
 All notable changes to the DynamoDB System Status Manager app are documented in this file.
 
-## [1.0.0] - 2026-04-17
+## [1.0] - V4 - 2026-07-16
 
-### Version 4 (Final Release)
+### Changed
+- **Architecture Migration**: Switched from AWS Signature V4 direct DynamoDB access to API Gateway + Lambda pattern
+  - Reason: Signature V4 was overly complex for a simple status toggle app
+  - New pattern is more maintainable and follows AWS best practices
 
-**Fixed:**
-- API response field mapping: Changed from `operational` to `operationalState`
-- POST request now sends `operationalState` as boolean instead of string
-- Added JSON parsing for ZAF client responses (handles both string and object responses)
-- Resolved "Forbidden" error by correctly formatting request payload
+### Fixed
+- **Field Naming Consistency**: Fixed mismatch between app and DynamoDB field names
+  - Issue: App was sending `operational` (String) but DynamoDB expected `operationalState` (Boolean)
+  - Fix: Updated `dynamoApi.js` to use `operationalState` for both GET and POST requests
+  - Added JSON parsing fallback: `typeof res === 'string' ? JSON.parse(res) : res`
 
-**Technical Details:**
-- `fetchSystems()` now reads `parsed.operationalState` from API response
-- `updateOperationalStatus()` sends `operationalState: newValue === 'true'` (boolean)
-- Added `typeof res === 'string' ? JSON.parse(res) : res` fallback
+### Added
+- Lambda function (`lambda_function.py`) to handle GET and POST requests
+- API Gateway REST API with API key authentication
+- Comprehensive error handling in Lambda function
+- CORS support for cross-origin requests
 
----
+## [0.3] - V3 - 2026-07-15
 
-## [0.3.0] - 2026-04-17
+### Changed
+- Attempted AWS Signature V4 implementation
+- Created `awsSig4.js` utility for request signing
 
-### Version 3
+### Issues
+- "Forbidden" errors due to field name mismatches
+- Complexity of managing AWS credentials in Zendesk
+- Decided to migrate to API Gateway pattern instead
 
-**Added:**
-- API key authentication via `x-api-key` header
-- Secure manifest parameter `webhookSecret` for storing API key
-- ZAF secure proxy for requests (`secure: true`)
-- Required headers for secure requests:
-  - `X-Zendesk-UA-Override: none`
-  - `X-Requested-With: ''`
+## [0.2] - V2 - 2026-07-14
 
-**Changed:**
-- All API requests now include API key in header
-- Requests routed through Zendesk proxy for security
+### Added
+- Direct DynamoDB integration using Zendesk secure proxy
+- System cards with operational status badges
+- Toggle functionality with loading states
 
----
+### Changed
+- Improved UI with color-coded status indicators
+- Added success/error notifications
 
-## [0.2.0] - 2026-04-16
+## [0.1] - V1 - 2026-07-13
 
-### Version 2
+### Added
+- Initial app creation via Zendesk App Builder
+- Basic UI with system status display
+- Mock data for development
+- Integration plan for DynamoDB
 
-**Changed:**
-- **Complete refactor**: Removed AWS Signature V4 signing
-- Replaced direct DynamoDB calls with API Gateway webhook
-- Simplified architecture to use REST API endpoint
-
-**Removed:**
-- `utils/awsSig4.js` - No longer needed with API Gateway
-- AWS credential parameters (`awsAccessKeyId`, `awsSecretAccessKey`, `awsRegion`)
-- Direct DynamoDB SDK calls
-
-**Added:**
-- Simple GET/POST requests to API Gateway
-- Domain whitelist for `89td2u0ux0.execute-api.eu-west-2.amazonaws.com`
-- GET endpoint for fetching system status: `?systemKey=paymentSystem`
-- POST endpoint for updating status: `{ systemKey, operationalState }`
-
-**Benefits:**
-- No AWS credentials stored in Zendesk app
-- Simpler security model (API key only)
-- Easier to maintain and debug
-- Better separation of concerns
-
----
-
-## [0.1.0] - 2026-04-16
-
-### Version 1 (Initial Release)
-
-**Initial Features:**
-- Display operational status for `paymentSystem` and `customerWebsite`
-- Toggle status between true/false with button clicks
-- Visual status badges (green for operational, red for offline)
-- Success/error notifications
-- Direct integration with DynamoDB using AWS Signature V4
-
-**Architecture (Version 1):**
-- AWS Signature V4 signing for DynamoDB requests
-- BatchGetItem for fetching multiple systems
-- UpdateItem for toggling status
-- Secure credential storage via manifest parameters
-
-**Files Created:**
-- `App.jsx` - Main app component with system cards
-- `utils/awsSig4.js` - AWS Signature V4 signing utility
-- `utils/dynamoApi.js` - DynamoDB API wrapper
-- `components/SystemCard.jsx` - Individual system status card
-- `styles/AppStyles.js` - Styled components
-- `constants.js` - System keys and table configuration
-- `mock.js` - Mock data for testing
+### Features
+- Display current operational status for paymentSystem and customerWebsite
+- Visual indicators (colors/icons) for operational vs non-operational states
+- Refresh button to reload statuses
 
 ---
 
 ## Architecture Evolution
 
-### Version 1: Direct DynamoDB
+### Version 1-2: Direct DynamoDB (Failed)
 ```
-Zendesk App → AWS Signature V4 → DynamoDB
+Zendesk App → AWS Credentials → DynamoDB
 ```
-**Pros**: Direct access, no intermediary
-**Cons**: AWS credentials in app, complex signing, harder to secure
+**Problems**:
+- Exposed AWS credentials in Zendesk settings (security risk)
+- Complex credential management
+- No API layer for future extensibility
 
-### Version 2-4: API Gateway + Lambda
+### Version 3: AWS Signature V4 (Complex)
 ```
-Zendesk App → API Gateway → Lambda → DynamoDB
+Zendesk App → Zendesk Proxy → AWS Signature V4 → DynamoDB
 ```
-**Pros**: 
+**Problems**:
+- Overly complex for simple use case
+- Field naming mismatches caused "Forbidden" errors
+- Hard to debug and maintain
+
+### Version 4: API Gateway + Lambda (Current) ✅
+```
+Zendesk App → API Gateway (API Key) → Lambda → DynamoDB
+```
+**Benefits**:
 - Simple API key authentication
-- No AWS credentials in Zendesk
-- Lambda provides business logic layer
-- Easier to monitor and debug
-- Better security model
+- Lambda handles all AWS logic
+- Easy to test and debug
+- Follows AWS best practices
+- Extensible for future features
 
 ---
 
-## Development Notes
+## Known Issues
 
-### Key Lessons Learned
+None currently.
 
-1. **Field Naming Consistency**: Always align frontend/backend field names
-   - Started with `operational` (string)
-   - Migrated to `operationalState` (boolean)
-   - Required careful mapping in `dynamoApi.js`
+## Planned Features
 
-2. **ZAF Client Response Handling**: The Zendesk client can return responses as either:
-   - Pre-parsed objects
-   - JSON strings
-   - Solution: Add `typeof res === 'string' ? JSON.parse(res) : res`
+- [ ] Support for additional systems beyond paymentSystem and customerWebsite
+- [ ] Timestamp tracking for last status change
+- [ ] User audit log (who changed what and when)
+- [ ] Bulk status updates
+- [ ] Integration with Zendesk triggers for auto-notifications
 
-3. **Secure Requests**: When using `secure: true` in ZAF requests:
-   - Must include `X-Zendesk-UA-Override: none`
-   - Must include `X-Requested-With: ''`
-   - Enables server-side secret resolution
+## Migration Notes
 
-4. **API Gateway Authentication**: 
-   - API keys simpler than AWS Signature V4
-   - Usage plans provide rate limiting
-   - Easier to rotate keys
+### Upgrading from V3 to V4
 
----
+If you're upgrading from a previous version:
 
-## Migration Guide
+1. **Complete AWS Setup**:
+   - Create API Gateway and Lambda function (see AWS_SETUP.md)
+   - Update manifest.json with new API Gateway domain
 
-### From Version 1 to Version 2+
+2. **Update App Settings**:
+   - Replace AWS credentials with single API key
+   - Remove `awsAccessKeyId`, `awsSecretAccessKey`, `awsRegion` parameters
+   - Add `webhookSecret` parameter with API Gateway API key
 
-If you have Version 1 installed:
+3. **Update DynamoDB Schema** (if needed):
+   - Ensure field is named `operationalState` (not `operational`)
+   - Ensure data type is Boolean (not String)
+   - Update existing items:
+     ```bash
+     aws dynamodb update-item \
+       --table-name GenericSystems \
+       --key '{"systemKey": {"S": "paymentSystem"}}' \
+       --update-expression "SET operationalState = :val REMOVE operational" \
+       --expression-attribute-values '{":val": {"BOOL": true}}'
+     ```
 
-1. **AWS Setup**: Follow [AWS_SETUP.md](AWS_SETUP.md) to create:
-   - API Gateway REST API
-   - Lambda function
-   - API key
-
-2. **Update App**:
-   - Uninstall Version 1
-   - Install Version 2+
-   - Remove old AWS credentials from settings
-   - Add new API key as `webhookSecret`
-
-3. **DynamoDB Schema**:
-   - No changes needed
-   - Table structure remains the same
+4. **Test Integration**:
+   - Verify GET and POST requests work with curl
+   - Test in Zendesk app
+   - Check CloudWatch logs for errors
 
 ---
 
-## Future Roadmap
+## Support
 
-- [ ] Add more system types beyond payment/website
-- [ ] System health metrics and uptime tracking
-- [ ] Status change history log
-- [ ] Automated health checks
-- [ ] Multi-region support
-- [ ] Slack/email notifications on status changes
-- [ ] Bulk operations (mark all offline)
-- [ ] Custom system names via settings
-
----
-
-## License
-
-MIT License - Copyright (c) 2026 Richard Uzzell
-
-## Contributors
-
-- Richard Uzzell (richard.uzzell@zendesk.com) - Initial development
+For questions or issues, contact: richard.uzzell@zendesk.com

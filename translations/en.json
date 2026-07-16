@@ -1,14 +1,8 @@
 {
   "app": {
     "name": "DynamoDB System Status Manager",
-    "short_description": "Monitor and toggle operational status of critical systems stored in AWS DynamoDB",
-    "long_description": "Enable support agents to view and update the operational status of critical systems (payment processing, customer websites, etc.) directly from Zendesk tickets. Toggle between operational and offline states with visual indicators and instant feedback. Integrates with AWS API Gateway, Lambda, and DynamoDB for real-time status management.",
-    "installation_instructions": "1. Complete AWS setup (DynamoDB table, Lambda function, API Gateway) - see AWS_SETUP.md\n2. Install this app in Zendesk\n3. Enter your API Gateway API key as the webhookSecret when prompted\n4. The app will appear in the ticket sidebar\n5. Toggle system status with one click"
-  },
-  "parameters": {
-    "webhookSecret": {
-      "label": "API Gateway API Key",
-      "helpText": "Enter the x-api-key from your AWS API Gateway. This is stored securely and used to authenticate requests to your Lambda function."
-    }
+    "short_description": "Manage system operational status via AWS DynamoDB",
+    "long_description": "This app allows support agents to view and update the operational status of critical systems stored in AWS DynamoDB. Features include: real-time status display with color-coded badges, one-click toggle between operational and offline states, and secure API Gateway integration with API key authentication. The app connects to a DynamoDB table via Lambda function, providing agents with immediate visibility and control over system status directly from the Zendesk ticket sidebar.",
+    "installation_instructions": "Before installing this app, you must complete the AWS setup: 1) Create a DynamoDB table named 'GenericSystems' with primary key 'systemKey' (String), 2) Deploy the Lambda function with IAM permissions for DynamoDB access, 3) Set up API Gateway with GET and POST methods requiring API key authentication, 4) Create an API key and usage plan. After AWS setup is complete, install this app and configure the 'webhookSecret' parameter with your API Gateway API key. See the GitHub repository for detailed setup instructions: https://github.com/RichardUzzellZD/dynamodb-system-status-manager"
   }
 }
