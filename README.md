@@ -1,92 +1,121 @@
 # DynamoDB System Status Manager
 
-A Zendesk ticket sidebar application that enables support agents to view and toggle the operational status of critical systems stored in AWS DynamoDB. The app integrates seamlessly with AWS API Gateway and Lambda to provide real-time system status management.
+A Zendesk ticket sidebar app that allows agents to toggle system operational status stored in AWS DynamoDB via API Gateway and Lambda.
 
-![Version](https://img.shields.io/badge/version-1.0-blue)
-![Zendesk](https://img.shields.io/badge/Zendesk-App%20Builder-green)
-![AWS](https://img.shields.io/badge/AWS-Lambda%20%7C%20DynamoDB%20%7C%20API%20Gateway-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+![App Version](https://img.shields.io/badge/version-1.0-blue.svg)
+![Framework](https://img.shields.io/badge/Zendesk_Framework-2.0-green.svg)
+![AWS](https://img.shields.io/badge/AWS-DynamoDB%20%7C%20Lambda%20%7C%20API%20Gateway-orange.svg)
 
-## 📋 Overview
+## Overview
 
-This app provides support agents with quick visibility and control over critical system statuses directly from Zendesk tickets. Agents can:
+This app provides a simple interface for support agents to view and update the operational status of critical systems directly from Zendesk tickets. It connects to AWS DynamoDB through API Gateway and Lambda, providing real-time status updates with visual feedback.
 
-- **View** real-time operational status of multiple systems
-- **Toggle** status between operational and offline with one click
-- **Monitor** payment systems, customer websites, and other critical infrastructure
-- **Track** changes with visual indicators (green/red status badges)
-- **Receive** instant feedback with success/error notifications
+## Features
 
-## ✨ Key Features
+✅ **Real-time Status Display**
+- View current operational status for multiple systems
+- Color-coded status badges (green for operational, red for offline)
+- Visual status indicators with icons
 
-### 🎯 System Status Management
+✅ **One-Click Toggle**
+- Change system status from operational to offline (or vice versa)
+- Immediate visual feedback during updates
+- Success/error notifications
 
-- **Real-Time Status Display**: Fetch current operational state from DynamoDB
-- **Visual Status Indicators**:
-  - 🟢 Green badge for "Operational" (true)
-  - 🔴 Red badge for "Offline" (false)
-- **One-Click Toggle**: Switch between operational/offline states
-- **Instant Feedback**: Success/error notifications after each action
+✅ **Systems Tracked**
+- Payment System
+- Customer Website
+- *(Easily extensible to additional systems)*
 
-### 🏗️ Architecture
+✅ **Secure AWS Integration**
+- API Gateway with API key authentication
+- Lambda function for DynamoDB operations
+- Secure credential management via Zendesk settings
+
+## Architecture
 
 ```
-Zendesk Ticket Sidebar
-        ↓
-   App Interface
-        ↓
-  API Gateway (AWS)
-        ↓
- Lambda Function (Python)
-        ↓
-  DynamoDB Table (GenericSystems)
+┌─────────────────┐
+│  Zendesk App    │
+│   (React UI)    │
+└────────┬────────┘
+         │
+         │ HTTPS + API Key
+         ↓
+┌─────────────────┐
+│  API Gateway    │
+│   /prod/update  │
+│                 │
+│  GET  - Fetch   │
+│  POST - Update  │
+└────────┬────────┘
+         │
+         │ Invokes
+         ↓
+┌─────────────────┐
+│ Lambda Function │
+│  (Python 3.x)   │
+└────────┬────────┘
+         │
+         │ Read/Write
+         ↓
+┌─────────────────┐
+│    DynamoDB     │
+│ GenericSystems  │
+│                 │
+│ systemKey (PK)  │
+│ operationalState│
+└─────────────────┘
 ```
 
-### 🔐 Security
+## Data Model
 
-- **Secure API Key**: Webhook secret stored encrypted in Zendesk
-- **Server-Side Proxy**: All requests routed through Zendesk's secure proxy
-- **IAM Permissions**: Lambda uses role-based access to DynamoDB
-- **Domain Whitelist**: Only approved API Gateway endpoint allowed
+**DynamoDB Table**: `GenericSystems`
 
-### 📦 Systems Tracked
+| Field | Type | Description |
+|-------|------|-------------|
+| `systemKey` | String (PK) | Unique identifier for the system |
+| `operationalState` | Boolean | Current operational status (true/false) |
 
-**Default Systems:**
-- `paymentSystem` - Payment processing infrastructure
-- `customerWebsite` - Public-facing customer website
+**Example Items**:
+```json
+{
+  "systemKey": "paymentSystem",
+  "operationalState": true
+}
 
-**DynamoDB Schema:**
-- **systemKey** (String, Primary Key): System identifier
-- **operationalState** (Boolean): true = Operational, false = Offline
+{
+  "systemKey": "customerWebsite",
+  "operationalState": false
+}
+```
 
-## 🚀 Quick Start
+## API Endpoints
 
-### Prerequisites
+### GET Request - Fetch System Status
 
-- Zendesk Support account (Professional or Enterprise)
-- AWS Account with permissions for:
-  - DynamoDB
-  - Lambda
-  - API Gateway
-  - IAM roles
-- Admin access to Zendesk
+**Endpoint**: `GET /prod/update-operational-state?systemKey={key}`
 
-### Installation
+**Headers**:
+- `x-api-key`: Your API Gateway API key
+- `Content-Type`: application/json
 
-1. **Set up AWS infrastructure** (see [AWS_SETUP.md](AWS_SETUP.md))
-2. **Install the Zendesk app** (see [INSTALLATION.md](INSTALLATION.md))
-3. **Configure the webhook secret**
-4. **Test the integration**
+**Response**:
+```json
+{
+  "operationalState": "true"
+}
+```
 
-## 🏗️ AWS Architecture
+### POST Request - Update System Status
 
-### DynamoDB Table
+**Endpoint**: `POST /prod/update-operational-state`
 
-**Table Name**: `GenericSystems`
-**Region**: `eu-west-2` (London)
-**Primary Key**: `systemKey` (String)
+**Headers**:
+- `x-api-key`: Your API Gateway API key
+- `Content-Type`: application/json
 
-**Table Structure:**
+**Body**:
 ```json
 {
   "systemKey": "paymentSystem",
@@ -94,252 +123,301 @@ Zendesk Ticket Sidebar
 }
 ```
 
-**Sample Items:**
-| systemKey | operationalState |
-|-----------|-----------------|
-| paymentSystem | true |
-| customerWebsite | true |
+**Response**:
+```json
+{
+  "message": "Operational state updated successfully"
+}
+```
 
-### Lambda Function
+## Installation
 
-**Function Name**: `fetchSystemData` or `updateSystemData`
-**Runtime**: Python 3.x
-**Handler**: `lambda_function.lambda_handler`
+### Prerequisites
 
-**Environment Variables:**
-- `DYNAMODB_TABLE_NAME`: GenericSystems
+1. **AWS Account** with permissions to create:
+   - DynamoDB tables
+   - Lambda functions
+   - API Gateway APIs
+   - IAM roles
 
-**IAM Permissions Required:**
-- `dynamodb:GetItem`
-- `dynamodb:UpdateItem`
+2. **Zendesk Account** with:
+   - Administrator access
+   - Ability to install private apps
 
-See [lambda/lambda_function.py](lambda/lambda_function.py) for complete code.
+### Step 1: AWS Setup
 
-### API Gateway
+**Follow the comprehensive [AWS_SETUP.md](AWS_SETUP.md) guide** which covers:
 
-**Endpoint**: `https://89td2u0ux0.execute-api.eu-west-2.amazonaws.com/prod/update-operational-state`
+1. Creating the DynamoDB table
+2. Setting up IAM roles and permissions
+3. Deploying the Lambda function
+4. Configuring API Gateway (REST API)
+5. Creating and securing API keys
+6. Testing the complete integration
 
-**Methods:**
-- **GET**: Fetch system status
-  ```
-  GET /update-operational-state?systemKey=paymentSystem
-  ```
-  
-- **POST**: Update system status
-  ```json
-  {
-    "systemKey": "paymentSystem",
-    "operationalState": false
-  }
-  ```
+**Important**: Complete all AWS setup steps before installing the Zendesk app.
 
-**Authentication**: `x-api-key` header with API key
+### Step 2: Install Zendesk App
 
-See [AWS_SETUP.md](AWS_SETUP.md) for detailed setup instructions.
+1. **Download this repository** as a ZIP file
 
-## 📖 Usage Guide
+2. **Navigate to Zendesk Admin Center**
+   - Go to: Apps and integrations → Apps → Zendesk Support apps
+   - Click "Upload private app"
+
+3. **Upload the ZIP file**
+   - Select the downloaded ZIP
+   - Click "Upload"
+
+4. **Configure App Settings**
+   - **Webhook Secret**: Enter your API Gateway API key
+     - Find this in: AWS Console → API Gateway → API Keys
+     - This is stored securely and never exposed in the UI
+
+5. **Install the App**
+   - Choose which ticket views should display the app
+   - Recommended: All ticket views for agent access
+
+### Step 3: Test the Integration
+
+1. Open any ticket in Zendesk
+2. Look for the "System Status" app in the right sidebar
+3. Verify that both systems are displayed:
+   - Payment System
+   - Customer Website
+4. Try toggling a status:
+   - Click "Set Offline" on an operational system
+   - Verify the status updates in the UI
+   - Check DynamoDB to confirm the change
+
+## Usage
 
 ### For Support Agents
 
-**Viewing System Status:**
-1. Open any ticket in Zendesk
-2. Look for "DynamoDB System Status Manager" in the right sidebar
-3. View current status of all systems:
-   - 🟢 Green "Operational" badge = System is running
-   - 🔴 Red "Offline" badge = System is down
+**Viewing System Status**:
+- Open any ticket
+- Check the "System Status" app in the right sidebar
+- Green badge = Operational
+- Red badge = Offline
 
-**Toggling System Status:**
-1. Find the system you want to update
-2. Click the toggle button:
-   - "Set Offline" (if currently operational)
-   - "Set Operational" (if currently offline)
-3. Wait for confirmation message
-4. Status badge updates automatically
+**Updating System Status**:
+1. Click "Set Offline" to mark a system as down
+2. Click "Set Operational" to restore a system
+3. Wait for the success confirmation message
+4. Use "Refresh" button to manually reload statuses
 
-**Example Scenarios:**
+### For Administrators
 
-**Scenario 1: Payment System Outage**
-- Customer reports payment failure
-- Agent opens ticket
-- Agent sees "Payment System" card
-- Clicks "Set Offline" to mark system as down
-- Other agents now see offline status
-- After fix, click "Set Operational"
+**Adding New Systems**:
+1. Add item to DynamoDB table with:
+   - `systemKey`: Unique identifier (e.g., "emailSystem")
+   - `operationalState`: true or false
+2. Update `constants.js` in the app source:
+   ```javascript
+   const SYSTEM_KEYS = ["paymentSystem", "customerWebsite", "emailSystem"];
+   const SYSTEM_LABELS = {
+     paymentSystem: "Payment System",
+     customerWebsite: "Customer Website",
+     emailSystem: "Email System"
+   };
+   ```
+3. Re-package and update the Zendesk app
 
-**Scenario 2: Website Maintenance**
-- Planned website maintenance begins
-- Agent sets "Customer Website" to offline
-- All agents see offline badge
-- After maintenance, toggle back to operational
+**Monitoring**:
+- Check CloudWatch Logs for Lambda execution logs
+- Monitor API Gateway metrics for request counts
+- Review DynamoDB item history if versioning is enabled
 
-## 🔧 Configuration
+## Configuration
 
-### Zendesk App Settings
+### App Settings
 
-During installation, you'll be prompted for:
+**Secure Settings** (configured during installation):
+- `webhookSecret`: API Gateway API key for authentication
 
-**webhookSecret** (Required, Secure)
-- The API key for your AWS API Gateway endpoint
-- Stored encrypted in Zendesk
-- Never exposed in client-side code
+### Customization
 
-### Adding More Systems
+**API Endpoint** (`constants.js`):
+```javascript
+const WEBHOOK_BASE_URL = "https://89td2u0ux0.execute-api.eu-west-2.amazonaws.com/prod";
+```
 
-To track additional systems:
+**System List** (`constants.js`):
+```javascript
+const SYSTEM_KEYS = ["paymentSystem", "customerWebsite"];
+const SYSTEM_LABELS = {
+  paymentSystem: "Payment System",
+  customerWebsite: "Customer Website"
+};
+```
 
-1. **Add to DynamoDB:**
-   ```bash
-   aws dynamodb put-item \
-     --table-name GenericSystems \
-     --item '{"systemKey": {"S": "emailService"}, "operationalState": {"BOOL": true}}'
+**Domain Whitelist** (`manifest.json`):
+```json
+"domainWhitelist": [
+  "89td2u0ux0.execute-api.eu-west-2.amazonaws.com"
+]
+```
+
+## Troubleshooting
+
+### App Shows "Failed to load systems"
+
+**Possible causes**:
+1. **Incorrect API key**
+   - Verify the API key in app settings matches AWS
+   - Check: AWS Console → API Gateway → API Keys
+
+2. **API Gateway not deployed**
+   - Ensure you've deployed the API to the "prod" stage
+   - Check: API Gateway → Stages → prod
+
+3. **CORS issues**
+   - Verify CORS is enabled on API Gateway
+   - Required headers: `Access-Control-Allow-Origin: *`
+
+4. **Lambda execution errors**
+   - Check CloudWatch Logs for Lambda errors
+   - Verify IAM role has DynamoDB permissions
+
+### "Forbidden" Error on Status Toggle
+
+**Possible causes**:
+1. **Missing API key**
+   - Ensure API key is configured in Zendesk app settings
+   - Verify the API key is active in AWS
+
+2. **Usage plan not attached**
+   - Check: API Gateway → Usage Plans
+   - Ensure the plan is associated with the "prod" stage
+
+### Status Not Updating in DynamoDB
+
+**Check**:
+1. Lambda CloudWatch Logs for errors
+2. IAM role permissions for `dynamodb:UpdateItem`
+3. Field name matching (`operationalState` not `operational`)
+4. Data type (Boolean, not String)
+
+### Getting More Details
+
+**Enable Debug Logging**:
+1. Check browser console (F12) for error messages
+2. Review Lambda logs in CloudWatch:
+   ```
+   AWS Console → CloudWatch → Log Groups → /aws/lambda/[function-name]
+   ```
+3. Check API Gateway execution logs:
+   ```
+   API Gateway → Stages → prod → Logs/Tracing
    ```
 
-2. **Update the app:**
-   - Modify `constants.js` in the bundled `index.html`
-   - Add new system key to `SYSTEM_KEYS` array
-   - Re-package and re-upload the app
+## Security Considerations
 
-See [CUSTOMIZATION.md](CUSTOMIZATION.md) for detailed instructions.
+### API Key Management
+- ✅ API keys are stored securely in Zendesk settings
+- ✅ Keys are marked as `secure: true` in manifest
+- ✅ Keys are never exposed in browser console or UI
+- ⚠️ Rotate API keys periodically (recommended: every 90 days)
 
-## 🛠️ Technical Details
+### AWS Security
+- ✅ Lambda uses IAM role with least-privilege permissions
+- ✅ API Gateway enforces API key authentication
+- ✅ DynamoDB access restricted to Lambda role only
+- ⚠️ Consider enabling DynamoDB encryption at rest
+- ⚠️ Enable CloudTrail for audit logging
 
-### Technology Stack
+### Network Security
+- ✅ All communications use HTTPS
+- ✅ Domain whitelist prevents unauthorized origins
+- ✅ CORS configured for API Gateway
 
-- **Frontend**: React 18, Zendesk Garden UI components
-- **Backend**: AWS Lambda (Python 3.x)
-- **Database**: AWS DynamoDB
-- **API**: AWS API Gateway (REST API)
-- **Auth**: API Key (x-api-key header)
-- **SDK**: Zendesk App Framework SDK 2.0
+## Development
 
-### API Request Flow
-
-**Fetch Status (GET):**
-```javascript
-// App makes request
-GET /update-operational-state?systemKey=paymentSystem
-Headers: { 'x-api-key': '<secret>' }
-
-// Lambda queries DynamoDB
-table.get_item(Key={'systemKey': 'paymentSystem'})
-
-// Returns
-{ "systemKey": "paymentSystem", "operationalState": "true", "RecordFound": "true" }
-```
-
-**Update Status (POST):**
-```javascript
-// App makes request
-POST /update-operational-state
-Body: { "systemKey": "paymentSystem", "operationalState": false }
-Headers: { 'x-api-key': '<secret>' }
-
-// Lambda updates DynamoDB
-table.update_item(Key={'systemKey': 'paymentSystem'}, ...)
-
-// Returns
-{ "success": true, "systemKey": "paymentSystem", "operationalState": false }
-```
-
-### Error Handling
-
-**Common Errors:**
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Forbidden (403)` | Invalid API key | Check webhook secret in app settings |
-| `System not found` | systemKey doesn't exist in DynamoDB | Add item to DynamoDB table |
-| `NetworkError` | API Gateway unreachable | Check domain whitelist in manifest |
-| `Timeout` | Lambda cold start or DynamoDB throttling | Retry request |
-
-## 📂 Repository Structure
+### Project Structure
 
 ```
 dynamodb-system-status-manager/
-├── README.md                      # This file
-├── AWS_SETUP.md                   # AWS infrastructure setup guide
-├── INSTALLATION.md                # Zendesk app installation
-├── CUSTOMIZATION.md               # How to customize
-├── CHANGELOG.md                   # Version history
-├── manifest.json                  # App configuration
+├── README.md                    # This file
+├── AWS_SETUP.md                 # AWS infrastructure setup guide
+├── CHANGELOG.md                 # Version history
+├── manifest.json                # Zendesk app manifest
 ├── translations/
-│   └── en.json                    # English translations
-├── assets/
-│   ├── index.html                 # Bundled React app
-│   ├── logo.png                   # App icon (large)
-│   └── logo-small.png             # App icon (small)
-└── lambda/
-    ├── lambda_function.py         # Lambda handler code
-    ├── requirements.txt           # Python dependencies
-    └── README.md                  # Lambda deployment guide
+│   └── en.json                  # English translations
+├── lambda/
+│   └── lambda_function.py       # Lambda handler code
+└── assets/
+    ├── index.html               # Bundled React app
+    ├── logo.png                 # App icon (large)
+    └── logo-small.png           # App icon (small)
 ```
 
-## 🐛 Troubleshooting
+### Tech Stack
 
-### App shows "Forbidden" error
+**Frontend**:
+- React 18
+- Zendesk Garden UI Components
+- Styled Components
+- Zendesk Apps Framework SDK 2.0
 
-**Cause**: Invalid API key or missing header
-**Solution**:
-1. Go to Admin Center → Apps → DynamoDB System Status Manager → Settings
-2. Re-enter the webhook secret (API key)
-3. Save and refresh the ticket page
+**Backend**:
+- AWS Lambda (Python 3.x)
+- Amazon DynamoDB
+- Amazon API Gateway (REST API)
+- AWS IAM
 
-### Status doesn't update after toggle
+### Local Development
 
-**Cause**: Lambda not updating DynamoDB
-**Solution**:
-1. Check Lambda CloudWatch logs for errors
-2. Verify Lambda has IAM permissions for `dynamodb:UpdateItem`
-3. Test Lambda function directly in AWS Console
+This app was built using **Zendesk App Builder**, which provides:
+- Live preview environment
+- Automatic bundling and compilation
+- Mock data for testing
+- Error reporting and debugging
 
-### "System not found" error
+To modify the app, use the App Builder interface or:
+1. Extract source files from `index.html`
+2. Edit component files
+3. Rebuild using Zendesk ZAT (Zendesk App Tools)
 
-**Cause**: systemKey doesn't exist in DynamoDB
-**Solution**:
-```bash
-aws dynamodb put-item \
-  --table-name GenericSystems \
-  --item '{"systemKey": {"S": "paymentSystem"}, "operationalState": {"BOOL": true}}'
-```
+## Version History
 
-### API Gateway returns 500 error
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
-**Cause**: Lambda function error
-**Solution**:
-1. Check CloudWatch Logs for the Lambda function
-2. Verify environment variable `DYNAMODB_TABLE_NAME` is set
-3. Test Lambda with sample event in AWS Console
+**Current Version**: 1.0 (V4)
+- ✅ Switched from AWS Signature V4 to API Gateway + Lambda
+- ✅ Fixed field naming: `operationalState` (Boolean)
+- ✅ Added JSON parsing fallback for API responses
+- ✅ Improved error handling and user feedback
 
-## 📜 License
+## Support
 
-MIT License - see [LICENSE](LICENSE) file for details
+### Getting Help
 
-## 🤝 Contributing
+1. **Check this README** for common issues
+2. **Review AWS_SETUP.md** for infrastructure questions
+3. **Check CloudWatch Logs** for runtime errors
+4. **Review CHANGELOG.md** for known issues
 
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+### Reporting Issues
 
-## 📞 Support
+When reporting issues, include:
+- Zendesk app version
+- Error message from browser console
+- Lambda CloudWatch logs (if applicable)
+- Steps to reproduce
 
-- **Issues**: [GitHub Issues](https://github.com/RichardUzzellZD/dynamodb-system-status-manager/issues)
-- **AWS Docs**: [DynamoDB](https://docs.aws.amazon.com/dynamodb/) | [Lambda](https://docs.aws.amazon.com/lambda/) | [API Gateway](https://docs.aws.amazon.com/apigateway/)
-- **Zendesk Docs**: [Apps Framework](https://developer.zendesk.com/documentation/apps/)
-- **Email**: richard.uzzell@zendesk.com
+## License
 
-## 🎯 Roadmap
+This is a private Zendesk app for internal use.
 
-- [ ] Add more system types (database, email service, etc.)
-- [ ] System health metrics (uptime percentage)
-- [ ] Status change history log
-- [ ] Automated status checks via CloudWatch
-- [ ] Multi-region support
-- [ ] Slack/email notifications on status changes
-- [ ] Bulk toggle (mark all systems offline)
-- [ ] Custom system names via app settings
+## Credits
+
+**Author**: Richard Uzzell (richard.uzzell@zendesk.com)
+
+**Built with**:
+- Zendesk App Builder
+- AWS Services (Lambda, DynamoDB, API Gateway)
+- React and Zendesk Garden UI
 
 ---
 
-**Built with ❤️ for Zendesk + AWS integration**
+**Need help with AWS setup?** → See [AWS_SETUP.md](AWS_SETUP.md) for detailed instructions.
