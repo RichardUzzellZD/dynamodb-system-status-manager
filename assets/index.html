@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=1"
+    />
+
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.log({error});
+        window.parent.postMessage({
+          type: 'iframe-error',
+          error: error?.toString(),
+          stack: error?.stack,
+          message,
+          source,
+          lineno,
+          colno
+        }, '*');
+        return false;
+      };
+
+      // Also catch unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(event) {
+        window.parent.postMessage({
+          type: 'iframe-error',
+          error: event.reason?.toString(),
+          stack: event.reason?.stack
+        }, '*');
+      });
+
+      // Forward console.error calls to the parent so the test-app runner can surface them.
+      // The original console.error is still invoked so the iframe's own devtools are unaffected.
+      (function () {
+        try {
+          var originalConsoleError = console.error.bind(console);
+          console.error = function () {
+            try {
+              var serialized = Array.prototype.slice.call(arguments).map(function (arg) {
+                if (arg instanceof Error) {
+                  return { name: arg.name, message: arg.message, stack: arg.stack };
+                }
+                if (typeof arg === 'string') {
+                  return arg;
+                }
+                try {
+                  return JSON.parse(JSON.stringify(arg));
+                } catch (_e) {
+                  return String(arg);
+                }
+              });
+              window.parent.postMessage({
+                type: 'iframe-console',
+                level: 'error',
+                args: serialized
+              }, '*');
+            } catch (_err) {
+              // Swallow serialization/postMessage errors so we never break the app.
+            }
+            return originalConsoleError.apply(console, arguments);
+          };
+        } catch (_e) {
+          // If we cannot wrap console.error for some reason, leave it as-is.
+        }
+      })();
+    </script>
+
+    <style>
+        html {
+          --tw-bg-opacity: 1;
+          --tw-text-opacity: 1;
+          font-feature-settings: "kern", "kern";
+          background-color: #fff;
+          box-sizing: border-box;
+          overflow-y: auto!important;
+          color: #293239;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen-Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, sans-serif;
+          font-kerning: normal;
+          font-size: 14px;
+          line-height: 20px;
+          min-height: 100%;
+      }
+
+      *,:after,:before{
+      	box-sizing:border-box;
+      }
+
+      html{
+      	font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji;
+      	line-height:1.15;
+      	-webkit-text-size-adjust:100%;
+      	-moz-tab-size:4;
+      	  -o-tab-size:4;
+      	     tab-size:4;
+      }
+
+      body{
+      	margin:0;
+      }
+
+      b,strong{
+      	font-weight:bolder;
+      }
+
+      code,kbd,pre,samp{
+      	font-family:ui-monospace,SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace;
+      	font-size:1em;
+      }
+
+      small{
+      	font-size:80%;
+      }
+
+      sub,sup{
+      	font-size:75%;
+      	line-height:0;
+      	position:relative;
+      	vertical-align:baseline;
+      }
+
+      sub{
+      	bottom:-.25em;
+      }
+
+      sup{
+      	top:-.5em;
+      }
+
+      table{
+      	border-color:currentcolor;
+      }
+
+      button,input,optgroup,select,textarea{
+      	font-family:inherit;
+      	font-size:100%;
+      	line-height:1.15;
+      	margin:0;
+      }
+
+      [type=button],[type=reset],[type=submit],button{
+      	-webkit-appearance:button;
+      }
+
+      legend{
+      	padding:0;
+      }
+
+      progress{
+      	vertical-align:baseline;
+      }
+
+      ::-webkit-inner-spin-button,::-webkit-outer-spin-button{
+      	height:auto;
+      }
+
+      [type=search]{
+      	-webkit-appearance:textfield;
+      	outline-offset:-2px;
+      }
+
+      ::-webkit-search-decoration{
+      	-webkit-appearance:none;
+      }
+
+      ::-webkit-file-upload-button{
+      	-webkit-appearance:button;
+      	font:inherit;
+      }
+
+      summary{
+      	display:list-item;
+      }
+
+      /* Additional normalization (kept distinct from initial block for clarity) */
+      html {
+      	background-color: #fff;
+      	min-height: 100%;
+      	box-sizing: border-box;
+      	overflow-y: scroll;
+      	line-height: 20px;
+      	color: #293239;
+      	font-feature-settings: "kern", "kern";
+      	font-kerning: normal;
+      	font-family: system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif;
+      	font-size: 14px;
+      }
+
+      * {
+      	font-weight: inherit;
+      }
+
+      *,:after,:before {
+      	box-sizing: inherit;
+      }
+
+      a {
+      	color: #1f73b7;
+      }
+
+      b {
+      	font-weight: 600;
+      }
+
+      button {
+      	cursor: pointer;
+      	padding: 0;
+      }
+
+      button,input,optgroup,select,textarea {
+      	line-height: inherit;
+      	font-family: inherit;
+      }
+
+      code {
+      	font-size: .95em;
+      }
+
+      code,kbd,pre,samp {
+      	font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+      }
+
+      em {
+      	font-style: inherit;
+      }
+
+      fieldset,iframe {
+      	border-width: 0;
+      }
+
+      h1,h2,h3,h4,h5,h6 {
+      	font-size: inherit;
+      }
+
+      blockquote,dd,dl,fieldset,figure,h1,h2,h3,h4,h5,h6,hr,ol,p,pre,ul {
+      	margin: 0;
+      	padding: 0;
+      }
+
+      hr {
+      	border: none;
+      	border-top: 1px solid;
+      	border-color: #d8dcde;
+      }
+
+      ins,u {
+      	text-decoration-line: none;
+      }
+
+      ol,ul {
+      	list-style-type: none;
+      }
+
+      img {
+      	max-width: 100%;
+      }
+
+      strong {
+      	font-weight: inherit;
+      }
+
+      svg {
+      	max-height: 100%;
+      }
+
+      [tabindex="-1"]:focus {
+      	outline: none !important;
+      }
+    </style>
+
+    <title>Zendesk App Builder</title>
+    <script type="importmap">
+      {"imports":{"react":"https://static.zdassets.com/app_builder/react@18.js","react-dom":"https://static.zdassets.com/app_builder/react-dom@18.js","react-dom/client":"https://static.zdassets.com/app_builder/react-dom@18/client.js","styled-components":"https://static.zdassets.com/app_builder/styled-components@6.x.js","pdfjs-dist":"https://static.zdassets.com/app_builder/pdfjs-dist@4.10.38.js","tesseract.js":"https://static.zdassets.com/app_builder/tesseract.js@6.0.0.js","@zendeskgarden/react-theming":"https://static.zdassets.com/app_builder/@zendeskgarden/react-theming@9.x.js","@zendeskgarden/react-buttons":"https://static.zdassets.com/app_builder/@zendeskgarden/react-buttons@9.x.js","@zendeskgarden/react-grid":"https://static.zdassets.com/app_builder/@zendeskgarden/react-grid@9.x.js","@zendeskgarden/react-forms":"https://static.zdassets.com/app_builder/@zendeskgarden/react-forms@9.x.js","@zendeskgarden/react-tables":"https://static.zdassets.com/app_builder/@zendeskgarden/react-tables@9.x.js","@zendeskgarden/react-typography":"https://static.zdassets.com/app_builder/@zendeskgarden/react-typography@9.x.js","@zendeskgarden/react-loaders":"https://static.zdassets.com/app_builder/@zendeskgarden/react-loaders@9.x.js","@zendeskgarden/react-tags":"https://static.zdassets.com/app_builder/@zendeskgarden/react-tags@9.x.js","@zendeskgarden/react-tabs":"https://static.zdassets.com/app_builder/@zendeskgarden/react-tabs@9.x.js","@zendeskgarden/react-accordions":"https://static.zdassets.com/app_builder/@zendeskgarden/react-accordions@9.x.js","@zendeskgarden/react-tooltips":"https://static.zdassets.com/app_builder/@zendeskgarden/react-tooltips@9.x.js","@zendeskgarden/react-modals":"https://static.zdassets.com/app_builder/@zendeskgarden/react-modals@9.x.js","@zendeskgarden/react-notifications":"https://static.zdassets.com/app_builder/@zendeskgarden/react-notifications@9.x.js","@zendeskgarden/react-pagination":"https://static.zdassets.com/app_builder/@zendeskgarden/react-pagination@9.x.js","@zendeskgarden/react-dropdowns":"https://static.zdassets.com/app_builder/@zendeskgarden/react-dropdowns@9.x.js","@zendeskgarden/react-avatars":"https://static.zdassets.com/app_builder/@zendeskgarden/react-avatars@9.x.js","@zendeskgarden/react-breadcrumbs":"https://static.zdassets.com/app_builder/@zendeskgarden/react-breadcrumbs@9.x.js","@zendeskgarden/react-chrome":"https://static.zdassets.com/app_builder/@zendeskgarden/react-chrome@9.x.js","@zendeskgarden/react-colorpickers":"https://static.zdassets.com/app_builder/@zendeskgarden/react-colorpickers@9.x.js","@zendeskgarden/react-datepickers":"https://static.zdassets.com/app_builder/@zendeskgarden/react-datepickers@9.x.js","@zendeskgarden/react-draggable":"https://static.zdassets.com/app_builder/@zendeskgarden/react-draggable@9.x.js","recharts":"https://static.zdassets.com/app_builder/recharts@3.2.1.js"}}
+    </script>
+    <script
+      type="text/javascript"
+      src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"
+    ></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/javascript">
+      window.zafClient = ZAFClient.init();
+
+      window?.zafClient?.invoke('resize', { width: '100%', height: '550px' });
+    </script>
+
+    <script type="module">
+          var __defProp = Object.defineProperty;
+      var __defProps = Object.defineProperties;
+      var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
+      var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+      var __hasOwnProp = Object.prototype.hasOwnProperty;
+      var __propIsEnum = Object.prototype.propertyIsEnumerable;
+      var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+      var __spreadValues = (a, b) => {
+        for (var prop in b || (b = {}))
+          if (__hasOwnProp.call(b, prop))
+            __defNormalProp(a, prop, b[prop]);
+        if (__getOwnPropSymbols)
+          for (var prop of __getOwnPropSymbols(b)) {
+            if (__propIsEnum.call(b, prop))
+              __defNormalProp(a, prop, b[prop]);
+          }
+        return a;
+      };
+      var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+      var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+      var __async = (__this, __arguments, generator) => {
+        return new Promise((resolve, reject) => {
+          var fulfilled = (value) => {
+            try {
+              step(generator.next(value));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          var rejected = (value) => {
+            try {
+              step(generator.throw(value));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+          step((generator = generator.apply(__this, __arguments)).next());
+        });
+      };
+
+      // vfs:index.jsx
+      import { createRoot } from "react-dom/client";
+      import React3, { useState as useState2, useEffect as useEffect2 } from "react";
+      import styled2 from "styled-components";
+      import { ThemeProvider, DEFAULT_THEME, getColor as getColor2 } from "@zendeskgarden/react-theming";
+
+      // vfs:App.jsx
+      import React2, { useState, useEffect, useCallback } from "react";
+      import { Alert } from "@zendeskgarden/react-notifications";
+      import { Button as Button2 } from "@zendeskgarden/react-buttons";
+      import { Spinner as Spinner2 } from "@zendeskgarden/react-loaders";
+      import { MD } from "@zendeskgarden/react-typography";
+
+      // vfs:components/SystemCard.jsx
+      import React from "react";
+      import { Button } from "@zendeskgarden/react-buttons";
+      import { Spinner } from "@zendeskgarden/react-loaders";
+
+      // vfs:styles/AppStyles.js
+      import styled from "styled-components";
+      import { getColor } from "@zendeskgarden/react-theming";
+      var Container = styled.div`
+        padding: 16px;
+      `;
+      var Header = styled.div`
+        margin-bottom: 16px;
+      `;
+      var Title = styled.h2`
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.default" })};
+      `;
+      var Subtitle = styled.p`
+        font-size: 12px;
+        margin: 0;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.subtle" })};
+      `;
+      var SystemCard = styled.div`
+        border: 1px solid ${(p) => getColor({ theme: p.theme, variable: "border.default" })};
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: ${(p) => getColor({ theme: p.theme, variable: "background.default" })};
+      `;
+      var SystemCardHeader = styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      `;
+      var SystemName = styled.div`
+        font-size: 14px;
+        font-weight: 600;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.default" })};
+      `;
+      var StatusRow = styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      `;
+      var StatusLabel = styled.div`
+        font-size: 12px;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.subtle" })};
+        margin-bottom: 8px;
+      `;
+      var StatusBadge = styled.div`
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: ${(p) => p.operational === "true" ? getColor({ theme: p.theme, variable: "background.successEmphasis" }) : getColor({ theme: p.theme, variable: "background.dangerEmphasis" })};
+        color: #ffffff;
+      `;
+      var StatusDot = styled.span`
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ffffff;
+        display: inline-block;
+      `;
+      var ActionRow = styled.div`
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+      `;
+      var AlertWrapper = styled.div`
+        margin-bottom: 14px;
+      `;
+      var LoadingWrapper = styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        flex-direction: column;
+        gap: 12px;
+      `;
+      var LoadingText = styled.div`
+        font-size: 13px;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.subtle" })};
+      `;
+      var ErrorText = styled.div`
+        font-size: 12px;
+        color: ${(p) => getColor({ theme: p.theme, variable: "foreground.danger" })};
+        margin-top: 4px;
+        word-break: break-word;
+      `;
+      var RefreshRow = styled.div`
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+      `;
+
+      // vfs:constants.js
+      var SYSTEM_KEYS = ["paymentSystem", "customerWebsite"];
+      var SYSTEM_LABELS = {
+        paymentSystem: "Payment System",
+        customerWebsite: "Customer Website"
+      };
+      var WEBHOOK_BASE_URL = "https://89td2u0ux0.execute-api.eu-west-2.amazonaws.com/prod";
+      var UPDATE_ENDPOINT = `${WEBHOOK_BASE_URL}/update-operational-state`;
+
+      // vfs:components/SystemCard.jsx
+      function SystemCard2({ system, onToggle, isUpdating }) {
+        const isOperational = system.operational === "true";
+        const label = SYSTEM_LABELS[system.systemKey] || system.systemKey;
+        const nextValue = isOperational ? "false" : "true";
+        const buttonLabel = isOperational ? "Set Offline" : "Set Operational";
+        return React.createElement(SystemCard, null, React.createElement(SystemCardHeader, null, React.createElement(SystemName, null, label), React.createElement(StatusBadge, { operational: system.operational }, React.createElement(StatusDot, null), isOperational ? "Operational" : "Offline")), React.createElement(StatusLabel, null, "Current status: ", React.createElement("strong", null, system.operational)), React.createElement(ActionRow, null, React.createElement(
+          Button,
+          {
+            size: "small",
+            isDanger: isOperational,
+            isPrimary: !isOperational,
+            disabled: isUpdating,
+            onClick: () => onToggle(system.systemKey, nextValue)
+          },
+          isUpdating ? React.createElement(React.Fragment, null, React.createElement(Spinner, { size: 14, "aria-label": "Updating" }), " Updating...") : buttonLabel
+        )));
+      }
+
+      // vfs:utils/dynamoApi.js
+      function fetchSystems() {
+        return __async(this, null, function* () {
+          const results = yield Promise.all(
+            SYSTEM_KEYS.map(
+              (key) => window.zafClient.request({
+                url: `${UPDATE_ENDPOINT}?systemKey=${encodeURIComponent(key)}`,
+                type: "GET",
+                secure: true,
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": "{{setting.webhookSecret}}",
+                  "X-Zendesk-UA-Override": "none",
+                  "X-Requested-With": ""
+                }
+              }).then((res) => {
+                const parsed = typeof res === "string" ? JSON.parse(res) : res;
+                return {
+                  systemKey: key,
+                  operational: String(parsed.operationalState)
+                };
+              })
+            )
+          );
+          return results;
+        });
+      }
+      function updateOperationalStatus(systemKey, newValue) {
+        return __async(this, null, function* () {
+          const response = yield window.zafClient.request({
+            url: UPDATE_ENDPOINT,
+            type: "POST",
+            secure: true,
+            contentType: "application/json",
+            data: JSON.stringify({
+              systemKey,
+              operationalState: newValue === "true"
+            }),
+            headers: {
+              "x-api-key": "{{setting.webhookSecret}}",
+              "X-Zendesk-UA-Override": "none",
+              "X-Requested-With": ""
+            }
+          });
+          return response;
+        });
+      }
+
+      // vfs:App.jsx
+      var App = () => {
+        const [systems, setSystems] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [updatingKey, setUpdatingKey] = useState(null);
+        const [error, setError] = useState(null);
+        const [successMsg, setSuccessMsg] = useState(null);
+        const loadSystems = useCallback(() => __async(void 0, null, function* () {
+          setLoading(true);
+          setError(null);
+          try {
+            const data = yield fetchSystems();
+            setSystems(data);
+          } catch (err) {
+            setError(
+              "Failed to load systems. " + (err && err.responseText ? err.responseText : JSON.stringify(err))
+            );
+          } finally {
+            setLoading(false);
+          }
+        }), []);
+        useEffect(() => {
+          loadSystems();
+        }, [loadSystems]);
+        const handleToggle = (systemKey, newValue) => __async(void 0, null, function* () {
+          setUpdatingKey(systemKey);
+          setError(null);
+          setSuccessMsg(null);
+          try {
+            yield updateOperationalStatus(systemKey, newValue);
+            setSystems(
+              (prev) => prev.map(
+                (s) => s.systemKey === systemKey ? __spreadProps(__spreadValues({}, s), { operational: newValue }) : s
+              )
+            );
+            setSuccessMsg(
+              `${systemKey} updated to "${newValue}" successfully.`
+            );
+            setTimeout(() => setSuccessMsg(null), 4e3);
+          } catch (err) {
+            setError(
+              `Failed to update ${systemKey}. ` + (err && err.responseText ? err.responseText : JSON.stringify(err))
+            );
+          } finally {
+            setUpdatingKey(null);
+          }
+        });
+        return React2.createElement(Container, null, React2.createElement(Header, null, React2.createElement(Title, null, "System Status"), React2.createElement(Subtitle, null, "via API Gateway webhook")), successMsg && React2.createElement(AlertWrapper, null, React2.createElement(Alert, { type: "success" }, React2.createElement(Alert.Title, null, "Updated"), React2.createElement(Alert.Paragraph, null, successMsg), React2.createElement(
+          Alert.Close,
+          {
+            "aria-label": "Dismiss",
+            onClick: () => setSuccessMsg(null)
+          }
+        ))), error && React2.createElement(AlertWrapper, null, React2.createElement(Alert, { type: "error" }, React2.createElement(Alert.Title, null, "Error"), React2.createElement(Alert.Paragraph, null, error), React2.createElement(
+          Alert.Close,
+          {
+            "aria-label": "Dismiss error",
+            onClick: () => setError(null)
+          }
+        ))), React2.createElement(RefreshRow, null, React2.createElement(Button2, { size: "small", isBasic: true, onClick: loadSystems, disabled: loading }, loading ? "Loading..." : "Refresh")), loading ? React2.createElement(LoadingWrapper, null, React2.createElement(Spinner2, { size: 32, "aria-label": "Loading systems" }), React2.createElement(LoadingText, null, "Loading system statuses...")) : systems.length === 0 ? React2.createElement(MD, null, "No systems found in the table.") : systems.map((system) => React2.createElement(
+          SystemCard2,
+          {
+            key: system.systemKey,
+            system,
+            onToggle: handleToggle,
+            isUpdating: updatingKey === system.systemKey
+          }
+        )));
+      };
+      var App_default = App;
+
+      // vfs:index.jsx
+      var INITIAL_APP_HEIGHT = "550px";
+      var INITIAL_APP_WIDTH = "100%";
+      var COPY_SUCCESS_TIMEOUT = 2e3;
+      var queryParams = new URLSearchParams(location.search);
+      var colorScheme = queryParams.get("colorScheme");
+      var AppWrapper = styled2.div`
+        background-color: ${(p) => getColor2({ theme: p.theme, variable: "background.default" })};
+        min-height: 100vh;
+      `;
+      var ErrorContainer = styled2.div`
+        font-size: 16px;
+        display: grid;
+        height: 100vh;
+        width: 100vw;
+        place-content: center;
+        padding: 20px;
+        text-align: center;
+      `;
+      var ErrorTitle = styled2.h4`
+        margin-bottom: 8px;
+        color: #d93f4c;
+      `;
+      var ErrorMessage = styled2.p`
+        margin-bottom: 16px;
+        color: #49545c;
+        max-width: 500px;
+      `;
+      var ErrorPre = styled2.pre`
+        background: #f8f9f9;
+        padding: 16px;
+        border-radius: 4px;
+        max-width: 600px;
+        overflow: auto;
+        text-align: left;
+        white-space: pre-wrap;
+      `;
+      var CopyButton = styled2.button`
+        margin-top: 16px;
+        padding: 8px 16px;
+        border: 1px solid #c1c3c5;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        &:hover {
+          background: #f8f9f9;
+          border-color: #68737d;
+        }
+      `;
+      var CopiedText = styled2.span`
+        color: #1f73b7;
+      `;
+      var IconText = styled2.span`
+        font-size: 14px;
+      `;
+      var ErrorBoundary = class extends React3.Component {
+        constructor(props) {
+          super(props);
+          __publicField(this, "copyErrorToClipboard", () => {
+            var _a;
+            const errorText = ((_a = this.state.error) == null ? void 0 : _a.toString()) || "Unknown error";
+            navigator.clipboard.writeText(errorText);
+            this.setState({ copied: true });
+            setTimeout(() => {
+              this.setState({ copied: false });
+            }, COPY_SUCCESS_TIMEOUT);
+          });
+          this.state = {
+            hasError: false,
+            error: null,
+            copied: false
+          };
+        }
+        static getDerivedStateFromError(error) {
+          return { hasError: true, error };
+        }
+        componentDidCatch(error, errorInfo) {
+          window.parent.postMessage({
+            type: "iframe-error",
+            error: error.toString(),
+            errorInfo: JSON.stringify(errorInfo)
+          }, "*");
+        }
+        render() {
+          var _a;
+          if (this.state.hasError) {
+            return React3.createElement(ErrorContainer, null, React3.createElement("div", null, React3.createElement(ErrorTitle, null, "An error occurred in your application"), React3.createElement(ErrorMessage, null, "To resolve this issue, please copy the error message below and paste it back into the app builder. App Builder will automatically attempt to fix this issue."), React3.createElement(ErrorPre, null, (_a = this.state.error) == null ? void 0 : _a.toString()), React3.createElement(
+              CopyButton,
+              {
+                onClick: this.copyErrorToClipboard,
+                title: "Click to copy error message"
+              },
+              this.state.copied ? React3.createElement(React3.Fragment, null, React3.createElement(CopiedText, null, "Copied!"), React3.createElement(IconText, null, "✓")) : React3.createElement(React3.Fragment, null, "Copy Error", React3.createElement(IconText, null, "📋"))
+            )));
+          }
+          return this.props.children;
+        }
+      };
+      var Entry = () => {
+        const [base, setBase] = useState2(colorScheme || "light");
+        useEffect2(() => {
+          window.zafClient.invoke("resize", { height: INITIAL_APP_HEIGHT, width: INITIAL_APP_WIDTH });
+          const client = window.zafClient;
+          client.on("colorScheme.changed", (colorScheme2) => setBase(colorScheme2));
+        }, []);
+        const themeObject = __spreadProps(__spreadValues({}, DEFAULT_THEME), {
+          colors: __spreadProps(__spreadValues({}, DEFAULT_THEME.colors), { base })
+        });
+        return React3.createElement(ErrorBoundary, null, React3.createElement(ThemeProvider, { theme: themeObject }, React3.createElement(AppWrapper, null, React3.createElement(App_default, null))));
+      };
+      try {
+        createRoot(document.getElementById("root")).render(React3.createElement(Entry, null));
+      } catch (error) {
+        console.log({ error });
+        window.parent.postMessage({
+          type: "iframe-error",
+          error: error.toString()
+        }, "*");
+      }
+      var index_default = Entry;
+      export {
+        index_default as default
+      };
+    </script>
+  </body>
+</html>
