@@ -1,0 +1,34 @@
+{
+  "name": "DynamoDB System Status Manager",
+  "author": {
+    "name": "Richard Uzzell",
+    "email": "richard.uzzell@zendesk.com"
+  },
+  "defaultLocale": "en",
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "assets/index.html",
+        "flexible": true
+      },
+      "new_ticket_sidebar": {
+        "url": "assets/index.html",
+        "flexible": true
+      }
+    }
+  },
+  "version": "1.0",
+  "frameworkVersion": "2.0",
+  "domainWhitelist": [
+    "89td2u0ux0.execute-api.eu-west-2.amazonaws.com"
+  ],
+  "parameters": [
+    {
+      "name": "webhookSecret",
+      "type": "text",
+      "secure": true,
+      "required": true
+    }
+  ],
+  "private": true
+}
